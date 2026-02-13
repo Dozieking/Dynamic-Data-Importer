@@ -44,6 +44,21 @@ def excel_importer(file_path, db_name, table_name):
         if col_name == 'id' and extra_info == 'auto_increment':
             continue
         
+        series = df[col_name]
+
+        # Check for null values in non-nullable columns
+        if series.isnull().any() and is_null == 'NO':
+            return (f"Column '{col_name}' contains null values but is defined as NOT NULL in the database table.")
+        
+        # Check for key type constraints        
+        if (key_type == 'PRI' or key_type == 'UNI') and series.duplicated().any():
+            return (f"Column '{col_name}' has duplicate values but is defined as a PRIMARY KEY or UNIQUE KEY in the database table.")
+
+        # Check for data type mismatches
+        clean_type = col_type.split('(')[0].lower()
+        
+
+
     
 
 
