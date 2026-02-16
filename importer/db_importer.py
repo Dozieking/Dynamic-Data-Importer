@@ -1,32 +1,32 @@
 import pandas as pd
-from loader import db_connect
+from database import db_connect, db_close
+from sqlalchemy import create_engine
 import datetime
-def excel_importer(file_path, db_name, table_name):
+
+
+def db_importer(file_path, db_name, table_name, username, password):
     # function to dynamically  import excel/csv files into a database table
 
     # Load the file into a DataFrame
     try:
         if file_path.endswith('.xlsx') or file_path.endswith('.xls'):
-            df = pd.read_excel(file_path)
+            df = pd.read_excel(file_path).convert_dtypes()
         elif file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(file_path).convert_dtypes()
 
     except Exception as e:
-        print(f"Error loading file: {e}")
-        return None
-    
-    # prefix = file_path[:-4] if file_path.endswith('.xlsx') else file_path[:-3]
+        return (f"Error loading file: {e}")
 
     # Retrieve the columns from the DataFrame
     columns = [col.strip() for col in df.columns]
 
     
-    conn, cursor =  db_connect(db_name)
+    conn, cursor =  db_connect(db_name, username, password)
     cursor.execute(f"SHOW COLUMNS FROM `{table_name}`")
     cols_info = cursor.fetchall()
 
     # Retrive the column names from the database table
-    db_cols = [col[0] for col in cols_info]
+    db_cols = [col[0] for col in cols_info if col[0]!='id' and col[5] !='auto_increment']
 
     # Check for missing/extra columns
     missing_cols = [col for col in db_cols if col not in columns]
@@ -36,7 +36,7 @@ def excel_importer(file_path, db_name, table_name):
         return (f"Missing columns in file: {missing_cols}!!!!")
     
     elif extra_cols:
-        return (f"Extra columns in file: {extra_cols}!!!")
+        print (f"Extra columns in file: {extra_cols}!!!")
     
     df = df[db_cols]
 
@@ -99,6 +99,31 @@ def excel_importer(file_path, db_name, table_name):
         sql_data_type = sql_to_python.get(clean_type, 'Not Found')
         if sql_data_type == 'Not Found':
             return (f"The detected data type of the '{col_name}' column is not defined in the expected data type dictionary.")
+        
+        if sql_data_type == int:
+            if not series.apply(lambda x: isinstance(x, (int,float))).all():
+                return (f"Column '{col_name}' contains data type mismatches. Expected data type: {sql_data_type.__name__}.")
+
+            if  not series.apply(lambda x: isinstance(x, sql_data_type)).all() and not series.dropna().apply(lambda x: float(x).is_integer()).all():
+                return (f"Column '{col_name}' contains data type mismatches. Expected data type: {sql_data_type.__name__}.")
+        else:
+            if not series.apply(lambda x: isinstance(x, sql_data_type)).all():
+                return (f"Column '{col_name}' contains data type mismatches. Expected data type: {sql_data_type.__name__}.")
+        
+    # Insert the DataFrame into the database using to_sql
+    try:
+        engine = create_engine(f'mysql+pymysql://{username}:@localhost/{db_name}')
+        df.to_sql(name=table_name, con=engine, if_exists='append', index=False)
+        return(f" Successfuly imported {len(df)} rows into {table_name} ")
+
+    except Exception as e:
+        return (f"Error inserting data into the database: {e}")
+    
+    finally:
+        db_close(conn)
+        return(f'''Successfuly imported {len(df)} rows into {table_name} 
+Database connection closed''')
+
         
 
 
