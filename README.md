@@ -1,5 +1,10 @@
 # Dynamic-Data-Importer
-A dynamic python pipeline for importing CSV and Excel files into a database with validation and schema handling. This dynamic data importer can essentially import most CSV and Excel files into a mysql database. The flow is explained below:
+A dynamic python pipeline for importing CSV and Excel files into a database with validation and schema handling. This dynamic data importer can essentially import most CSV and Excel files into a mysql database. To use/test the project run the test file:
+```bash
+test.py
+```
+
+ The flow of this project is explained below:
 
 1. # THE DATABASE CONNECTION
 The database connection is handled in the database.py file. This file contains two functions:
