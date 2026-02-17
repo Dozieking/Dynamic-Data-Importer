@@ -26,19 +26,28 @@ def db_importer(file_path, db_name, table_name, username, password):
     cols_info = cursor.fetchall()
 
     # Retrive the column names from the database table
-    db_cols = [col[0] for col in cols_info if col[0]!='id' and col[5] !='auto_increment']
+    db_cols = [col[0] for col in cols_info if col[5] !='auto_increment']
 
     # Check for missing/extra columns
-    missing_cols = [col for col in db_cols if col not in columns]
+    missing_cols = [col[0] for col in cols_info if col[0] not in columns and col[4] is None and col[5] != 'auto_increment']
     extra_cols = [col for col in columns if col not in db_cols]
+
+    # Collect missing columns that have default values in the database
+    missing_cols_with_defaults = [col[0] for col in cols_info if col[0] not in columns and col[4] is not None]
 
     if missing_cols:
         return (f"Missing columns in file: {missing_cols}!!!!")
     
     elif extra_cols:
         print (f"Extra columns in file: {extra_cols}!!!")
-    
-    df = df[db_cols]
+
+    # If there are missing columns with default values, we can fill those columns with their default values during the import process. We will reindex the DataFrame to include those missing columns, and since they have default values in the database, we can leave them as null in the DataFrame and the database will fill them with their default values during the import.
+    if missing_cols_with_defaults:
+        print (f"Missing columns with default values in the database: {missing_cols_with_defaults}. These columns will be filled with their default values during import.")    
+        df = df.reindex(columns=columns + missing_cols_with_defaults)
+
+    else:
+        df = df[db_cols]
 
     # Column Validation
     for col_name, col_type, is_null, key_type, default, extra_info in cols_info:
@@ -46,6 +55,10 @@ def db_importer(file_path, db_name, table_name, username, password):
             continue
         
         series = df[col_name]
+
+        # Check for if columns with default values are completely null in the DataFrame. If they are, we can skip the validation for those columns since they will be filled with their default values during import.
+        if default is not None and series.isnull().all():
+            continue
 
         # Check for null values in non-nullable columns
         if series.isnull().any() and is_null == 'NO':

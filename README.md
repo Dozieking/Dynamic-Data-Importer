@@ -3,6 +3,8 @@ A dynamic python pipeline for importing CSV and Excel files into a database with
 ```bash
 test.py
 ```
+# NOTE: In this project is included a sample_table.py file which you can run to create a database and table for test. Along with it are sample csv and excel files which you can use to test. This is to make testing of the project easier.
+# Should you decide to use a different mysql database and excel/csv file, that is also totally fine.
 
  The flow of this project is explained below:
 
@@ -22,7 +24,7 @@ The db_importer() function handles the following operations:
 2. Retrieving columns from the DataFrame and the Database
 3. Checking for missing columns and returning an error message if a missing column is detected.
 4. Checking for extra columns and returning a warning message and then adjusting the loaded DataFrame to match that of the database columns
-5. Column Validation. This validation involves null checks, key type constraints and data type mismatches
+5. Column Validation. This validation involves null checks, default checks, key type constraints and data type mismatches
 6. Importing of the clean DataFrame into the mysql database using the "to_sql()" pandas method
 ```
 
